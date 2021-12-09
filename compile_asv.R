@@ -18,6 +18,7 @@ if (grepl('win', os, ignore.case = T) == T ){
 
 # point to directories
 lake_dir = paste0(path_pat, 'project_data/ASV_data/raw_data/')
+column_dir = paste0(path_pat, 'project_data/ASV_data/metadata/')
 dump_dir = paste0(path_pat, 'project_data/ASV_data/compiled/')
 
 #list lakes in lake directory
@@ -67,13 +68,15 @@ for (y in 1:nrow(compiled_lake_list)) {
   rm(date_list_df)
 }
 
+deployment_date_list <- deployment_date_list %>% 
+  select(lake, year, date_list) 
+
 rm(compiled_lake_list)
 
 write.csv(deployment_date_list, file.path(dump_dir, paste0('ASV_deployment_date_list_v', Sys.Date(), '.csv')), row.names = F)
 
 
 # open and save files into main dataframe
-
 file_list <- dir(lake_dir, pattern = ('.csv'),  recursive = T)
 
 #remove file names that have already been collated - need to add this for next round, no need to read things in again
@@ -83,13 +86,29 @@ file_list <- dir(lake_dir, pattern = ('.csv'),  recursive = T)
 # summarize imported list; 
 # remove those files from the file list
 
+bag_csv <- file_list[!grepl('rosmav', file_list)]
+rosmav_csv <- file_list[grepl('rosmav', file_list)]
 
 
-#collate data with CV
-for(l in 1:length(file_list)) {
-  df = read.csv(file.path(lake_dir, file_list[l])) %>% 
-    mutate(file_path = file_list[l])
-  print(file_list_2021[l])
+# read in the translate table for existing names to cv
+bag_colnames_cv <- read.csv(file.path(column_dir, 'bag_colnames_cvnames.csv')) %>% 
+  rename(df_names = column_names)
+
+#collate bag data with CV
+for(l in 1:length(bag_csv)) {
+  df = read.csv(file.path(lake_dir, bag_csv[l])) 
+  
+  #get column names and change to CV
+  df_names = names(df)
+  df_names = data.frame(df_names)
+  df_names <- left_join(df_names, bag_colnames_cv)
+  names(df) = df_names$CV_units 
+  
+  #add filepath
+  df <- df %>% 
+    mutate(bag_file_path = bag_csv[l])
+  
+  print(bag_csv[l])
   if(l == 1){
     all_asv_data = df
   } else {
@@ -99,63 +118,92 @@ for(l in 1:length(file_list)) {
 
 #grab lake, year, dep date
 all_asv_data <- all_asv_data %>% 
-  mutate(lake = substr(file_path, 1, 3),
-    year = substr(file_path, 5, 8),
-    deployment_date = substr(file_path, 10, 19))
+  mutate(lake = substr(bag_file_path, 1, 3),
+    year = substr(bag_file_path, 5, 8),
+    deployment_date = substr(bag_file_path, 10, 19),
+    bag_orig_file = substr(bag_file_path, 21, nchar(bag_file_path)))
 
-#join with og file
+## collate rosmav data with asv data ####
 
+# read in the translate table for existing names to cv
+rosmav_colnames_cv <- read.csv(file.path(column_dir, 'rosmav_colnames_cvnames.csv')) %>% 
+  rename(df_names = column_names)
 
-#### change this to rename! and put in loop
-#make list of column names
-column_names <- names(all_asv_data) 
-column_names <- as.data.frame(column_names)
-column_names <- column_names %>% 
-  mutate(CV_name_unit = case_when(column_names == 'gps_timestamp' | column_names == 'gpsspeed_timestamp' ~ 'timestamp_gps_ns',
-                                  column_names == 'latitude' ~ 'latitude_deg',
-                                  column_names == 'longitude' ~ 'longitude_deg',
-                                  column_names == 'compass_timestamp' ~ 'timestamp_compass_ns',
-                                  column_names == 'heading' ~ 'heading_deg',
-                                  column_names == 'airspeed_timestamp' ~ 'timestamp_airspeed_ns',
-                                  column_names == 'airspeed' ~ 'airspeed_mps', 
-                                  column_names == 'sonar_timestamp' ~ 'timestamp_sonar_ns',
-                                  column_names == 'distance' | column_names == 'sonar' ~ '', # need definition
-                                  column_names == 'gps_velocity_timestamp' ~ 'timestamp_gpsvelocity_ns',
-                                  column_names == 'gps_linear_x' ~ '', 
-                                  column_names == 'gps_linear_y' ~ '',
-                                  column_names == 'local_velocity_timestamp' ~ 'timestamp_localvelocity_ns',
-                                  column_names == 'local_linear_x'| column_names == 'pose.pose.position.x' ~ '',
-                                  column_names == 'local_linear_y'| column_names == 'pose.pose.position.y' ~ '',
-                                  column_names == 'local_linear_z'| column_names == 'pose.pose.position.z' ~ '',
-                                  column_names == 'local_angular_x'| column_names ==  'pose.pose.orientation.x' ~ '',
-                                  column_names == 'local_angular_y'| column_names ==  'pose.pose.orientation.y' ~ '',
-                                  column_names == 'local_angular_z' | column_names == 'pose.pose.orientation.z' ~ '',
-                                  column_names == 'local_angular_z' | column_names == 'pose.pose.orientation.w' ~ '',
-                                  column_names == 'sonde_timestamp' ~ 'timestamp_sonde_ns',
-                                  column_names == 'Battery.V' ~ 'batteryVoltage_V',
-                                  column_names == 'Temp.Â.C' | column_names == 'Temp..C' ~ 'temperatureWater_degC',
-                                  column_names == 'Depth.m' |column_names == 'Depth..m' ~ 'depthSensor_sonde_m',
-                                  column_names == 'Cond.ÂµS.cm'| column_names == 'Cond.µS.cm' ~ 'electricalConductivity_uscm',
-                                  column_names == 'SpCond.mS.cm' ~ 'specificConductance_mscm',
-                                  column_names == 'SpCond.ÂµS.cm'| column_names ==  'SpCond.µS.cm' ~ 'specificConductance_uscm',
-                                  column_names == 'Chlorophyll.RFU' | column_names == 'Chlorophyll..µg.L' ~  'chlorophyll_a_RFU',
-                                  column_names == 'ODO...sat' ~ 'oxygenDissolved_perc',
-                                  column_names == 'ODO.mg.L' ~ 'oxygenDissolved_mgl', 
-                                  column_names == 'Turbidity.NTU' ~ 'turbidity_NTU', 
-                                  column_names == 'Salinity.PPT' ~ 'salinity_PPT',
-                                  column_names == 'BGA.PC.µg.L' ~ 'blue_GreenAlgae_Cyanobacteria_Phycocyanin_ugl',
-                                  column_names == 'TSS.mg.L' ~ 'solidsTotalSuspended_mgl',
-                                  column_names == 'Wiper.Position.V' ~ '',
-                                  TRUE ~ column_names))
-#paste names on these
-names(all_asv_data) = column_names$CV_name_unit
-
-#harmonize for multiple col name changes
-all_asv_data <- all_asv_data %>% 
+for(y in 1:length(rosmav_csv)) {
+  df = read.csv(file.path(lake_dir, rosmav_csv[y])) 
   
-  filter(~'')
+  #get column names and change to CV
+  df_names = names(df)
+  df_names = data.frame(df_names)
+  df_names <- left_join(df_names, rosmav_colnames_cv)
+  names(df) = df_names$cv_units 
+  
+  #add filepath
+  df <- df %>% 
+    mutate(rosmav_file_path = rosmav_csv[y])
+  
+  print(rosmav_csv[y])
+  if(y == 1){
+    all_rosmav = df
+  } else {
+    all_rosmav = full_join(all_rosmav, df)
+  }
+}
 
+names(all_rosmav)
+
+#grab lake, year, dep date
+all_rosmav <- all_rosmav %>% 
+  mutate(lake = substr(rosmav_file_path, 1, 3),
+         year = substr(rosmav_file_path, 5, 8),
+         deployment_date = substr(rosmav_file_path, 10, 19),
+         rosmav_orig_file = substr(rosmav_file_path, 21, nchar(rosmav_file_path)))
+
+all_rosmav
+
+## grab the waypoints files ####
+wp_list <- dir(lake_dir, pattern = ('.waypoints'),  recursive = T)
+
+#remove file names that have already been collated - need to add this for next round, no need to read things in again
+# list.files(dump_dir)
+#get most recent version
+# imported_list <- read.csv(most reacent version)
+# summarize imported list; 
+# remove those files from the file list
+
+
+wp_colnames = c('wp_index', 'waypoint_seq', 'wp_coord_frame', 'wp_command', 
+                'wp_param1', 'wp_param2', 'wp_param3', 'wp_param4', 'wp_param_lat', 
+                'wp_param_long', 'wp_param_alt', 'wp_autocontinue')
+
+
+for(k in 1:length(wp_list)) {
+  df = read.delim(file.path(lake_dir, wp_list[k]),
+                  sep = '\t',
+                  skip = 1,
+                col.names = wp_colnames) %>% 
+    mutate(wp_file_path = wp_list[k])
+  print(wp_list[k])
+  if(k == 1){
+    all_wp = df
+  } else {
+    all_wp = full_join(all_wp, df)
+  }
+}
+
+#grab lake, year, dep date
+all_wp <- all_wp %>% 
+  mutate(lake = substr(wp_file_path, 1, 3),
+         year = substr(wp_file_path, 5, 8),
+         deployment_date = substr(wp_file_path, 10, 19),
+         wp_orig_file = substr(wp_file_path, 21, nchar(wp_file_path)))
+
+## collate files ####
+
+#might need to read in the metadata for the proper wp file association (names don't always match)
 
 write.csv(all_asv_data, file.path(dump_dir, paste0('ASV_raw_data_allmissions_v', Sys.Date(), '.csv')), row.names = F)
 
+
+## truncate before WP1; add flag for loiter ####
           
