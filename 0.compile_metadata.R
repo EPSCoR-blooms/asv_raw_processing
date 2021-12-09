@@ -1,5 +1,7 @@
 # This script compiles all metadata for the robotics runs from the ASV template.
 
+# this will likely need some attention at the end for dealing with incomparable data types in the joins.
+
 #load libraries
 library(tidyverse)
 library(readxl)
@@ -32,15 +34,15 @@ read_asv_template = function(filename, directory){
            deployment_endtime = format(deployment_endtime, '%H:%M'))
 }
 
-# #read in the names of files already incorporated
-# incorp_filelist <- readRDS(file.path(inter_dir,'metadata_file_list.RDS'))
+#read in the names of files already incorporated
+incorp_filelist <- readRDS(file.path(inter_dir,'metadata_file_list.RDS'))
 
 #list files in meta dir
 filelist <- list.files(meta_dir)
 saveRDS(filelist, file.path(inter_dir,'metadata_file_list.RDS'))
 
-# #remove already-incorporated files
-# filelist <- filelist[incorp_filelist]
+#remove already-incorporated files
+filelist <- filelist[incorp_filelist]
 
 #apply function over filelist
 for(i in 1:length(filelist)) {
@@ -83,9 +85,9 @@ for(j in 1:length(filelist)){
 }
 
 # write the additional data metadata file
-# collated_additional_sampling <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv'))) %>% 
-#   mutate(date = as.character(date),
-#          time_grab = format(as.POSIXct(time_grab), '%H:%M'))
+collated_additional_sampling <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv'))) %>%
+  mutate(date = as.character(date),
+         time_grab = format(as.POSIXct(time_grab), '%H:%M'))
 
 additional_sampling %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
@@ -94,7 +96,7 @@ additional_sampling %>%
                           lake == 'Sunapee' ~ 'SUN',
                           TRUE ~ lake),
          date = as.character(date)) %>% 
-  # full_join(., collated_additional_sampling) %>% 
+  full_join(., collated_additional_sampling) %>%
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv')), row.names = F)
 
 # get the sheets list for each metadata file and use it for if statements in loop
@@ -112,10 +114,10 @@ for(j in 1:length(filelist)){
   }
 }
 
-# # write the additional data metadata file
-# collated_additional_sampling_loc <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv'))) %>%
-#   mutate(date = as.character(date),
-#          time_grab = as.character(format(as.POSIXct(time_grab), '%H:%M')))
+# write the additional data metadata file
+collated_additional_sampling_loc <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv'))) %>%
+  mutate(date = as.character(date),
+         time_grab = as.character(format(as.POSIXct(time_grab), '%H:%M')))
 
 samploc_data %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
@@ -125,7 +127,7 @@ samploc_data %>%
                           TRUE ~ lake),
          date = as.character(date),
          time_grab = as.character(format(as.POSIXct(time_grab), '%H:%M'))) %>%
-  # full_join(., collated_additional_sampling_loc) %>%
+  full_join(., collated_additional_sampling_loc) %>%
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv')), row.names = F)
 
 
@@ -144,9 +146,9 @@ for(j in 1:length(filelist)){
   }
 }
 
-# # write the additional data metadata file
-# collated_sonde <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv'))) %>%
-#   mutate(date = as.character(date))
+# write the additional data metadata file
+collated_sonde <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv'))) %>%
+  mutate(date = as.character(date))
 
 sonde_data %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
@@ -155,7 +157,7 @@ sonde_data %>%
                           lake == 'Sunapee' ~ 'SUN',
                           TRUE ~ lake),
          date = as.character(date)) %>% 
-  # full_join(., collated_additional_sampling_loc) %>% 
+  full_join(., collated_additional_sampling_loc) %>%
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv')), row.names = F)
 
 
