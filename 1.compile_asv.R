@@ -1,5 +1,6 @@
 # This script compiles all raw data for the robotics runs from the bag csv files, the rosmav files, and the waypoints files. 
 # Note, the completed metadata template is also required so that the proper waypoints files are associated with the rosmav files.
+# If you have not yet run 0.compile_metadata.R go do that before you run this script.
 
 #load libraries
 library(tidyverse)
@@ -21,7 +22,21 @@ if (grepl('win', os, ignore.case = T) == T ){
 lake_dir = paste0(path_pat, 'project_data/ASV_data/raw_csv_data/')
 path_dir = paste0(path_pat, 'project_data/ASV_data/raw_path_data/')
 meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/')
-dump_dir = paste0(path_pat, 'project_data/ASV_data/compiled/')
+comp_dir = paste0(path_pat, 'project_data/ASV_data/compiled/')
+inter_dir = paste0(path_pat, 'project_data/ASV_data/intermediary/')
+proc_dir = paste0(path_pat, 'project_data/ASV_data/analysis_ready/')
+parent_dir = paste0(path_pat, 'project_data/ASV_data/')
+
+# read in metadata and select columns for use in this script ####
+metadata <- read.csv(file.path(comp_dir, 'compiled_ASV_deployment_general_info.csv')) 
+
+#grab data for asv processing ####
+metadata <- metadata %>% 
+  select(date, lake, lab, deployment_type, equipment,
+         deployment_instance, deployment_starttime, deployment_endtime,
+         path_filename, ASV_processed_filename, rosmav_missionreached_filename) %>% 
+  rename(rosmav_filename = rosmav_missionreached_filename) %>% 
+  filter(!is.na(rosmav_filename))
 
 # list lakes in lake directory ####
 lake_list <- dir(lake_dir, recursive = F)
@@ -75,7 +90,7 @@ deployment_date_list <- deployment_date_list %>%
 
 rm(compiled_lake_list)
 
-write.csv(deployment_date_list, file.path(dump_dir, paste0('ASV_deployment_date_list.csv')), row.names = F)
+write.csv(deployment_date_list, file.path(parent_dir, paste0('ASV_deployment_date_list.csv')), row.names = F)
 
 
 # open and save bag files into main dataframe ####
@@ -85,16 +100,22 @@ file_list <- dir(lake_dir, pattern = ('.csv'),  recursive = T)
 bag_csv <- file_list[!grepl('rosmav', file_list)]
 rosmav_csv <- file_list[grepl('rosmav', file_list)]
 
-#remove file names that have already been collated - need to add this for next round, no need to read things in again
-# list.files(dump_dir)
-#get most recent version
-# imported_list <- read.csv(most recent version)
-# summarize imported list; 
-# remove those files from the file list
+# # remove file names that have already been collated - need to add this for next round, no need to read things in again
+# #read in the names of files already incorporated
+# incorp_bag_filelist <- readRDS(file.path(inter_dir,'bag_file_list.RDS'))
+# incorp_rosmav_filelist <- readRDS(file.path(inter_dir,'rosmav_file_list.RDS'))
+# 
+# #saverds
+# saveRDS(bag_csv, file.path(inter_dir,'bag_file_list.RDS'))
+# saveRDS(rosmav_csv, file.path(inter_dir,'rosmav_file_list.RDS'))
+# 
+# #remove already-incorporated files
+# bag_csv <- bag_csv[incorp_bag_filelist]
+# rosmav_csv <- rosmav_csv[incorp_rosmav_filelist]
 
 
 # read in the translate table for existing names to cv
-bag_colnames_cv <- read.csv(file.path(meta_dir, 'bag_colnames_cvnames.csv')) %>% 
+bag_colnames_cv <- read.csv(file.path(meta_dir, 'colnames_cv/bag_colnames_cvnames.csv')) %>% 
   rename(df_names = column_names)
 
 #collate bag data with CV
@@ -123,13 +144,23 @@ for(l in 1:length(bag_csv)) {
 all_asv_data <- all_asv_data %>% 
   mutate(lake = substr(bag_file_path, 1, 3),
     year = substr(bag_file_path, 5, 8),
-    deployment_date = substr(bag_file_path, 10, 19),
-    bag_orig_file = substr(bag_file_path, 21, nchar(bag_file_path)))
+    date = substr(bag_file_path, 10, 19),
+    ASV_processed_filename = substr(bag_file_path, 21, nchar(bag_file_path)))
 
-## collate rosmav data with asv data ####
+names(all_asv_data)
+names(metadata)
+
+#add metadata
+all_asv_data <- all_asv_data %>% 
+  left_join(., metadata)
+
+#write asv data 
+write.csv(all_asv_data, file.path(inter_dir, 'asv_data_raw.csv'))
+
+# read in rosmav data ####
 
 # read in the translate table for existing names to cv
-rosmav_colnames_cv <- read.csv(file.path(meta_dir, 'rosmav_colnames_cvnames.csv')) %>% 
+rosmav_colnames_cv <- read.csv(file.path(meta_dir, 'colnames_cv/rosmav_colnames_cvnames.csv')) %>% 
   rename(df_names = column_names)
 
 for(y in 1:length(rosmav_csv)) {
@@ -153,35 +184,41 @@ for(y in 1:length(rosmav_csv)) {
   }
 }
 
-names(all_rosmav)
-
 #grab lake, year, dep date
 all_rosmav <- all_rosmav %>% 
   mutate(lake = substr(rosmav_file_path, 1, 3),
          year = substr(rosmav_file_path, 5, 8),
-         deployment_date = substr(rosmav_file_path, 10, 19),
-         rosmav_orig_file = substr(rosmav_file_path, 21, nchar(rosmav_file_path)))
+         date = substr(rosmav_file_path, 10, 19),
+         rosmav_filename = substr(rosmav_file_path, 21, nchar(rosmav_file_path)))
 
-all_rosmav
-
-## grab the waypoints files ####
-wp_list <- dir(lake_dir, pattern = ('.waypoints'),  recursive = T)
-
-#remove file names that have already been collated - need to add this for next round, no need to read things in again
-# list.files(dump_dir)
-#get most recent version
-# imported_list <- read.csv(most reacent version)
-# summarize imported list; 
-# remove those files from the file list
+#join with metadata
+all_rosmav <- all_rosmav %>% 
+  left_join(., metadata)%>% 
+  filter(!is.na(rosmav_filename))
 
 
-wp_colnames = c('wp_index', 'waypoint_seq', 'wp_coord_frame', 'wp_command', 
+
+# read in the waypoints files ####
+wp_list <- dir(path_dir, pattern = ('.waypoints'),  recursive = T)
+
+# #remove file names that have already been collated - need to add this for next round, no need to read things in again
+# #read in the names of files already incorporated
+# incorp_wp_filelist <- readRDS(file.path(inter_dir,'waypoint_file_list.RDS'))
+# 
+# #list files in meta dir
+# saveRDS(wp_list, file.path(inter_dir,'waypoint_file_list.RDS'))
+# 
+# #remove already-incorporated files
+# wp_list <- wp_list[incorp_wp_filelist]
+
+
+wp_colnames = c('waypoint_seq', 'wp_seq', 'wp_coord_frame', 'wp_command', 
                 'wp_param1', 'wp_param2', 'wp_param3', 'wp_param4', 'wp_param_lat', 
                 'wp_param_long', 'wp_param_alt', 'wp_autocontinue')
 
 
 for(k in 1:length(wp_list)) {
-  df = read.delim(file.path(lake_dir, wp_list[k]),
+  df = read.delim(file.path(path_dir, wp_list[k]),
                   sep = '\t',
                   skip = 1,
                 col.names = wp_colnames) %>% 
@@ -197,22 +234,24 @@ for(k in 1:length(wp_list)) {
 #grab lake, year, dep date
 all_wp <- all_wp %>% 
   mutate(lake = substr(wp_file_path, 1, 3),
-         year = substr(wp_file_path, 5, 8),
-         deployment_date = substr(wp_file_path, 10, 19),
-         wp_orig_file = substr(wp_file_path, 21, nchar(wp_file_path)))
+         path_filename = substr(wp_file_path, 5, nchar(wp_file_path))) %>% 
+  select(lake, path_filename, waypoint_seq, wp_command, wp_param1)
 
-## collate files ####
+#join with metadata
+all_wp <- all_wp %>% 
+  left_join(., metadata) 
 
-#might need to read in the metadata for the proper wp file association (names don't always match)
+# collate and save rosmav and waypoint files ####
 
+#join rosmav and waypoints files
+rosmav_wp <- full_join(all_rosmav, all_wp) %>% 
+  filter(!is.na(datetime)) #drop data from paths that didn't complete or record
 
+#grab only the columns we need
+rosmav_wp <- rosmav_wp %>% 
+  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, deployment_starttime, deployment_endtime,
+         timestamp_header_sec, header_seq, waypoint_seq, wp_command, wp_param1,
+         rosmav_filename, path_filename, ASV_processed_filename)
 
-## truncate before WP1; add flag for loiter ####
-
-
-#join with existing file ####
-
-# save file ####
-write.csv(all_asv_data, file.path(dump_dir, paste0('ASV_raw_data_allmissions_v', Sys.Date(), '.csv')), row.names = F)
-
-          
+# save rosmav_wp file
+write.csv(rosmav_wp, file.path(inter_dir, 'rosmav_waypoints_allmissions.csv'), row.names = F)
