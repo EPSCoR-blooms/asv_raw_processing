@@ -17,26 +17,34 @@ if (grepl('win', os, ignore.case = T) == T ){
   }
 
 # point to directories
-meta_dir = paste0(path_pat, 'project_data/ASV_data/raw_data/metadata/')
-parent_dir = paste0(path_pat, 'project_data/compiled_metadata/')
+meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/metadata_template/')
+comp_dir = paste0(path_pat, 'project_data/ASV_data/compiled/')
+inter_dir = paste0(path_pat, 'project_data/ASV_data/intermediary/')
+
+# read in the ASV metadata files - the weather and deployment log sheets - these must always be present ####
+read_asv_template = function(filename, directory){
+  weather_obs <- read_xlsx(file.path(directory, filename),
+                           sheet = 'WeatherFieldInfo')
+  deploy_info <- read_xlsx(file.path(directory, filename), 
+            sheet = 'deployment_log')
+  metadata <- full_join(weather_obs, deploy_info) %>% 
+    mutate(deployment_starttime = format(deployment_starttime, '%H:%M'),
+           deployment_endtime = format(deployment_endtime, '%H:%M'))
+}
+
+# #read in the names of files already incorporated
+# incorp_filelist <- readRDS(file.path(inter_dir,'metadata_file_list.RDS'))
 
 #list files in meta dir
 filelist <- list.files(meta_dir)
+saveRDS(filelist, file.path(inter_dir,'metadata_file_list.RDS'))
 
-# write a function to read in all metadata files, including each of the worksheets
-read_asv_uav_template = function(filename, directory){
-  dep_log <- read_xlsx(file.path(directory, filename), 
-            sheet = 'deployment_log')
-  add_data <- read_xlsx(file.path(directory, filename), 
-            sheet = 'additional_data_log')
-  metadata <- full_join(dep_log, add_data) %>% 
-    mutate(start_time = format(start_time, '%H:%M'),
-           end_time = format(end_time, '%H:%M'))
-}
+# #remove already-incorporated files
+# filelist <- filelist[incorp_filelist]
 
 #apply function over filelist
 for(i in 1:length(filelist)) {
-  dataframe = read_asv_uav_template(filelist[i], meta_dir)
+  dataframe = read_asv_template(filelist[i], meta_dir)
   if(i == 1){
     compiled = dataframe
   } else {
@@ -44,5 +52,111 @@ for(i in 1:length(filelist)) {
   }
 }
 
-#save compiled metadata
-write.csv(compiled, file.path(parent_dir, paste0('compiled_ASV_UAV_metadata_', Sys.Date(), '.csv')), row.names = F)
+#format lake names to 3 letter and save file
+compiled %>% 
+  mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
+                          lake == 'China' ~ 'CHN', 
+                          lake == 'Sabattus' ~ 'SAB',
+                          lake == 'Sunapee' ~ 'SUN',
+                          TRUE ~ lake)) %>% 
+  write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_general_info.csv')), row.names = F)
+
+# read in the ASV additional data sheets ####
+
+#grab lake, date info from compiled
+additional_data <- compiled %>% 
+  select(lake, date)
+
+# get the sheets list for each metadata file and use it for if statements in loop
+for(j in 1:length(filelist)){
+  sheets_list <- excel_sheets(file.path(meta_dir, filelist[j]))
+  print(paste0('file name: ', filelist[j]))
+  if (any(grepl('additional', sheets_list))){
+    add_data <- read_xlsx(file.path(meta_dir, filelist[j]),
+              sheet = 'additional_data_log')
+    print('additional data metadata detected')
+    additional_sampling <- full_join(additional_data, add_data)
+  }  else {
+    print('no additional metadata detected')
+    additional_sampling <- additional_data
+  }
+}
+
+# write the additional data metadata file
+# collated_additional_sampling <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv'))) %>% 
+#   mutate(date = as.character(date),
+#          time_grab = format(as.POSIXct(time_grab), '%H:%M'))
+
+additional_sampling %>% 
+  mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
+                          lake == 'China' ~ 'CHN', 
+                          lake == 'Sabattus' ~ 'SAB',
+                          lake == 'Sunapee' ~ 'SUN',
+                          TRUE ~ lake),
+         date = as.character(date)) %>% 
+  # full_join(., collated_additional_sampling) %>% 
+  write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv')), row.names = F)
+
+# get the sheets list for each metadata file and use it for if statements in loop
+for(j in 1:length(filelist)){
+  sheets_list <- excel_sheets(file.path(meta_dir, filelist[j]))
+  print(paste0('file name: ', filelist[j]))
+  if (any(grepl('sampling', sheets_list))) {
+    samploc_data <- read_xlsx(file.path(meta_dir, filelist[j]),
+                              sheet = 'sampling_locations')
+    print('sampling location metadata detected')
+    samploc_data <- full_join(additional_data, samploc_data)
+  }  else {
+    print('no additional metadata detected')
+    samploc_data <- additional_data
+  }
+}
+
+# # write the additional data metadata file
+# collated_additional_sampling_loc <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv'))) %>%
+#   mutate(date = as.character(date),
+#          time_grab = as.character(format(as.POSIXct(time_grab), '%H:%M')))
+
+samploc_data %>% 
+  mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
+                          lake == 'China' ~ 'CHN', 
+                          lake == 'Sabattus' ~ 'SAB',
+                          lake == 'Sunapee' ~ 'SUN',
+                          TRUE ~ lake),
+         date = as.character(date),
+         time_grab = as.character(format(as.POSIXct(time_grab), '%H:%M'))) %>%
+  # full_join(., collated_additional_sampling_loc) %>%
+  write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv')), row.names = F)
+
+
+# get the sheets list for each metadata file and use it for if statements in loop
+for(j in 1:length(filelist)){
+  sheets_list <- excel_sheets(file.path(meta_dir, filelist[j]))
+  print(paste0('file name: ', filelist[j]))
+  if (any(grepl('sonde', sheets_list))) {
+    sonde_data <- read_xlsx(file.path(meta_dir, filelist[j]),
+                            sheet = 'sonde_data')
+    print('sonde data detected')
+    sonde_data <- full_join(additional_data, sonde_data)
+  }  else {
+    print('no additional metadata detected')
+    sonde_data <- additional_data
+  }
+}
+
+# # write the additional data metadata file
+# collated_sonde <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv'))) %>%
+#   mutate(date = as.character(date))
+
+sonde_data %>% 
+  mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
+                          lake == 'China' ~ 'CHN', 
+                          lake == 'Sabattus' ~ 'SAB',
+                          lake == 'Sunapee' ~ 'SUN',
+                          TRUE ~ lake),
+         date = as.character(date)) %>% 
+  # full_join(., collated_additional_sampling_loc) %>% 
+  write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv')), row.names = F)
+
+
+
