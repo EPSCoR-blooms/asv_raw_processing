@@ -100,18 +100,18 @@ file_list <- dir(lake_dir, pattern = ('.csv'),  recursive = T)
 bag_csv <- file_list[!grepl('rosmav', file_list)]
 rosmav_csv <- file_list[grepl('rosmav', file_list)]
 
-# remove file names that have already been collated - need to add this for next round, no need to read things in again
-#read in the names of files already incorporated
-incorp_bag_filelist <- readRDS(file.path(inter_dir,'bag_file_list.RDS'))
-incorp_rosmav_filelist <- readRDS(file.path(inter_dir,'rosmav_file_list.RDS'))
-
-#saverds
-saveRDS(bag_csv, file.path(inter_dir,'bag_file_list.RDS'))
-saveRDS(rosmav_csv, file.path(inter_dir,'rosmav_file_list.RDS'))
-
-#remove already-incorporated files
-bag_csv <- bag_csv[incorp_bag_filelist]
-rosmav_csv <- rosmav_csv[incorp_rosmav_filelist]
+# # remove file names that have already been collated - need to add this for next round, no need to read things in again
+# #read in the names of files already incorporated
+# incorp_bag_filelist <- readRDS(file.path(inter_dir,'bag_file_list.RDS'))
+# incorp_rosmav_filelist <- readRDS(file.path(inter_dir,'rosmav_file_list.RDS'))
+# 
+# #saverds
+# saveRDS(bag_csv, file.path(inter_dir,'bag_file_list.RDS'))
+# saveRDS(rosmav_csv, file.path(inter_dir,'rosmav_file_list.RDS'))
+# 
+# #remove already-incorporated files
+# bag_csv <- bag_csv[incorp_bag_filelist]
+# rosmav_csv <- rosmav_csv[incorp_rosmav_filelist]
 
 
 # read in the translate table for existing names to cv
@@ -154,7 +154,7 @@ names(metadata)
 all_asv_data <- all_asv_data %>% 
   left_join(., metadata)
 
-#write asv data as RDS (it's a huge file)
+#write asv data as RDS (it's a huge file and it takes a minute)
 saveRDS(all_asv_data, file.path(inter_dir, 'asv_data_raw.RDS'))
 
 # read in rosmav data ####
@@ -201,15 +201,15 @@ all_rosmav <- all_rosmav %>%
 # read in the waypoints files ####
 wp_list <- dir(path_dir, pattern = ('.waypoints'),  recursive = T)
 
-#remove file names that have already been collated - need to add this for next round, no need to read things in again
-#read in the names of files already incorporated
-incorp_wp_filelist <- readRDS(file.path(inter_dir,'waypoint_file_list.RDS'))
-
-#list files in meta dir
-saveRDS(wp_list, file.path(inter_dir,'waypoint_file_list.RDS'))
-
-#remove already-incorporated files
-wp_list <- wp_list[incorp_wp_filelist]
+# #remove file names that have already been collated - need to add this for next round, no need to read things in again
+# #read in the names of files already incorporated
+# incorp_wp_filelist <- readRDS(file.path(inter_dir,'waypoint_file_list.RDS'))
+# 
+# #list files in meta dir
+# saveRDS(wp_list, file.path(inter_dir,'waypoint_file_list.RDS'))
+# 
+# #remove already-incorporated files
+# wp_list <- wp_list[incorp_wp_filelist]
 
 
 wp_colnames = c('waypoint_seq', 'wp_seq', 'wp_coord_frame', 'wp_command', 
