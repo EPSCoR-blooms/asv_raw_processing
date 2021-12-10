@@ -24,7 +24,6 @@ path_dir = paste0(path_pat, 'project_data/ASV_data/raw_path_data/')
 meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/')
 comp_dir = paste0(path_pat, 'project_data/ASV_data/compiled/')
 inter_dir = paste0(path_pat, 'project_data/ASV_data/intermediary/')
-proc_dir = paste0(path_pat, 'project_data/ASV_data/analysis_ready/')
 parent_dir = paste0(path_pat, 'project_data/ASV_data/')
 
 # read in metadata and select columns for use in this script ####
