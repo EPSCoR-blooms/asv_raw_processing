@@ -35,7 +35,6 @@ rosmav_waypoints <- read.csv(file.path(inter_dir, 'rosmav_waypoints_allmissions.
   rename(timestamp_gps_sec = timestamp_header_sec) 
 
 # process each asv deployment one at a time ----
-
 deployment_list = unique(asv_data_raw$ASV_processed_filename)
 
 for(i in 1:length(deployment_list)) {
@@ -90,5 +89,5 @@ for(i in 1:length(deployment_list)) {
   #write file to processed folder
   fwrite(asv_wp_trunc, file.path(proc_dir, lake_folder, paste0(lake_folder, '_', deployment_date, '_asv_processed.csv')), row.names = F)
   message(paste0('file processed and saved as ',lake_folder, '_', deployment_date, '_asv_processed.csv'))
-  message('')#left intnetionally blank to create space between files
+  message('')#left intentionally blank to create space between files
 }
