@@ -36,15 +36,8 @@ read_asv_template = function(filename, directory){
            deployment_endtime = format(deployment_endtime, '%H:%M'))
 }
 
-#read in the names of files already incorporated
-incorp_filelist <- readRDS(file.path(inter_dir,'metadata_file_list.RDS'))
-
 #list files in meta dir
 filelist <- list.files(meta_dir)
-saveRDS(filelist, file.path(inter_dir,'metadata_file_list.RDS'))
-
-#remove already-incorporated files
-filelist <- filelist[incorp_filelist]
 
 #apply function over filelist
 for(i in 1:length(filelist)) {
@@ -88,8 +81,7 @@ for(j in 1:length(filelist)){
 
 # write the additional data metadata file
 collated_additional_sampling <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv'))) %>%
-  mutate(date = as.character(date),
-         time_grab = format(as.POSIXct(time_grab), '%H:%M'))
+  mutate(date = as.character(date))
 
 additional_sampling %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
@@ -118,8 +110,7 @@ for(j in 1:length(filelist)){
 
 # write the additional data metadata file
 collated_additional_sampling_loc <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv'))) %>%
-  mutate(date = as.character(date),
-         time_grab = as.character(format(as.POSIXct(time_grab), '%H:%M')))
+  mutate(date = as.character(date))
 
 samploc_data %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
@@ -159,7 +150,7 @@ sonde_data %>%
                           lake == 'Sunapee' ~ 'SUN',
                           TRUE ~ lake),
          date = as.character(date)) %>% 
-  full_join(., collated_additional_sampling_loc) %>%
+  full_join(., collated_sonde) %>%
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv')), row.names = F)
 
 

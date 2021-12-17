@@ -66,6 +66,7 @@ if(length(cv_needed$CV_units) > 0) {
   message('all controlled vocabulary present for bag file processing')
 }
 
+rm(df)
 
 # read in metadata and select columns for processed rosmav files ####
 rosmav_filelist <- metadata$rosmav_missionreached_filename
@@ -74,9 +75,9 @@ for(i in 1:length(rosmav_filelist)){
   df <- read.csv(file.path(lake_dir, asv_lakelist[i], asv_yearlist[i], asv_datelist[i], rosmav_filelist[i]))
   if(i == 1){
     rosmav_col_for_cv <- colnames(df)
-  } else{
+  } else {
     rosmav_col2_for_cv <- colnames(df)
-    rosmav_col_for_cv <- append(rosmav_col_for_cv, col2_for_cv)
+    rosmav_col_for_cv <- append(rosmav_col_for_cv, rosmav_col2_for_cv)
   }
 }
 
