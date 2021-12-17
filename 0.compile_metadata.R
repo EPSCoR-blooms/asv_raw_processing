@@ -12,11 +12,13 @@ path_pat = NULL
 
 if (grepl('win', os, ignore.case = T) == T ){
   path_pat = 'Z:/'
-  } else if (grepl('mac', os, ignore.case = T) == T ){
+  message('Windows OS detected.')
+} else if (grepl('mac', os, ignore.case = T) == T ){
   path_pat = '/Volumes/EpscorBlooms/'
-  } else {
-    message('OS path pattern not detected. Please store OS path pattern manually.')
-  }
+  message('Mac OS detected')
+} else {
+  message('OS path pattern not detected. Please store OS path pattern manually.')
+}
 
 # point to directories
 meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/metadata_template/')

@@ -14,8 +14,10 @@ path_pat = NULL
 
 if (grepl('win', os, ignore.case = T) == T ){
   path_pat = 'Z:/'
+  message('Windows OS detected.')
 } else if (grepl('mac', os, ignore.case = T) == T ){
   path_pat = '/Volumes/EpscorBlooms/'
+  message('Mac OS detected')
 } else {
   message('OS path pattern not detected. Please store OS path pattern manually.')
 }
