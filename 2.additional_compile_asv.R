@@ -4,7 +4,6 @@
 
 #load libraries
 library(tidyverse)
-library(readxl)
 
 # determine OS for automatic filepath determination
 os <- osVersion
@@ -12,13 +11,17 @@ path_pat = NULL
 
 if (grepl('win', os, ignore.case = T) == T ){
   path_pat = 'Z:/'
-  } else if (grepl('mac', os, ignore.case = T) == T ){
+  message('Windows OS detected.')
+} else if (grepl('mac', os, ignore.case = T) == T ){
   path_pat = '/Volumes/EpscorBlooms/'
-  } else {
-    message('OS path pattern not detected. Please store OS path pattern manually.')
-  }
+  message('Mac OS detected')
+} else {
+  message('OS path pattern not detected. Please store OS path pattern manually.')
+}
 
-# point to directories ####
+# SET UP PROCESSING ----
+
+## point to directories ####
 lake_dir = paste0(path_pat, 'project_data/ASV_data/raw_csv_data/')
 path_dir = paste0(path_pat, 'project_data/ASV_data/raw_path_data/')
 meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/')
@@ -26,10 +29,10 @@ comp_dir = paste0(path_pat, 'project_data/ASV_data/compiled/')
 inter_dir = paste0(path_pat, 'project_data/ASV_data/intermediary/')
 parent_dir = paste0(path_pat, 'project_data/ASV_data/')
 
-# read in metadata and select columns for use in this script ####
+## read in metadata and select columns for use in this script ####
 metadata <- read.csv(file.path(comp_dir, 'compiled_ASV_deployment_general_info.csv')) 
 
-#grab data for asv processing ####
+## grab data for asv processing ####
 metadata <- metadata %>% 
   select(date, lake, lab, deployment_type, equipment,
          deployment_instance, deployment_starttime, deployment_endtime,
@@ -37,10 +40,10 @@ metadata <- metadata %>%
   rename(rosmav_filename = rosmav_missionreached_filename) %>% 
   filter(!is.na(rosmav_filename))
 
-# list lakes in lake directory ####
+## list lakes in lake directory ####
 lake_list <- dir(lake_dir, recursive = F)
 
-# create a matrix of lakes, years, dates of data to work through the folder system ####
+## create a matrix of lakes, years, dates of data to work through the folder system ####
 for(i in 1:length(lake_list)) {
   year_list = dir(file.path(lake_dir, lake_list[i]), recursive = F)
   for(x in 1:length(year_list)) {
@@ -92,26 +95,27 @@ rm(compiled_lake_list)
 write.csv(deployment_date_list, file.path(parent_dir, paste0('ASV_deployment_date_list.csv')), row.names = F)
 
 
-# open and save bag files into main dataframe ####
+# LIST FILES FOR PROCESSING ####
 file_list <- dir(lake_dir, pattern = ('.csv'),  recursive = T)
 
 # break out the bag and rosmav files
 bag_csv <- file_list[!grepl('rosmav', file_list)]
 rosmav_csv <- file_list[grepl('rosmav', file_list)]
 
-# # remove file names that have already been collated - need to add this for next round, no need to read things in again
-# #read in the names of files already incorporated
-# incorp_bag_filelist <- readRDS(file.path(inter_dir,'bag_file_list.RDS'))
-# incorp_rosmav_filelist <- readRDS(file.path(inter_dir,'rosmav_file_list.RDS'))
-# 
-# #saverds
-# saveRDS(bag_csv, file.path(inter_dir,'bag_file_list.RDS'))
-# saveRDS(rosmav_csv, file.path(inter_dir,'rosmav_file_list.RDS'))
-# 
-# #remove already-incorporated files
-# bag_csv <- bag_csv[incorp_bag_filelist]
-# rosmav_csv <- rosmav_csv[incorp_rosmav_filelist]
+# remove file names that have already been collated - need to add this for next round, no need to read things in again
+#read in the names of files already incorporated
+incorp_bag_filelist <- readRDS(file.path(inter_dir,'bag_file_list.RDS'))
+incorp_rosmav_filelist <- readRDS(file.path(inter_dir,'rosmav_file_list.RDS'))
 
+#saverds
+saveRDS(bag_csv, file.path(inter_dir,'bag_file_list.RDS'))
+saveRDS(rosmav_csv, file.path(inter_dir,'rosmav_file_list.RDS'))
+
+#remove already-incorporated files
+bag_csv <- bag_csv[!(bag_csv %in% incorp_bag_filelist)]
+rosmav_csv <- rosmav_csv[!(rosmav_csv %in% incorp_rosmav_filelist)]
+
+# BAG FILES PROCESSING ----
 
 # read in the translate table for existing names to cv
 bag_colnames_cv <- read.csv(file.path(meta_dir, 'colnames_cv/bag_colnames_cvnames.csv')) %>% 
@@ -125,7 +129,7 @@ for(l in 1:length(bag_csv)) {
   df_names = names(df)
   df_names = data.frame(df_names)
   df_names <- left_join(df_names, bag_colnames_cv)
-  names(df) = df_names$CV_units 
+  colnames(df) = df_names$CV_units 
   
   #add filepath
   df <- df %>% 
@@ -151,12 +155,16 @@ names(metadata)
 
 #add metadata
 all_asv_data <- all_asv_data %>% 
-  left_join(., metadata)
+  left_join(., metadata) 
+
+#drop redundant timestamps from GPS sensor
+all_asv_data <- all_asv_data %>% 
+  select(-timestamp_gpslocalvelocity_sec,-timestamp_gpsspeed_sec,-timestamp_gpsvelocity_sec)
 
 #write asv data as RDS (it's a huge file and it takes a minute)
 saveRDS(all_asv_data, file.path(inter_dir, 'asv_data_raw.RDS'))
 
-# read in rosmav data ####
+# ROSMAV DATA PROCESSING ####
 
 # read in the translate table for existing names to cv
 rosmav_colnames_cv <- read.csv(file.path(meta_dir, 'colnames_cv/rosmav_colnames_cvnames.csv')) %>% 
@@ -195,21 +203,8 @@ all_rosmav <- all_rosmav %>%
   left_join(., metadata)%>% 
   filter(!is.na(rosmav_filename))
 
-
-
-# read in the waypoints files ####
+# WAYPOINTS FILE PROCESSING ####
 wp_list <- dir(path_dir, pattern = ('.waypoints'),  recursive = T)
-
-# #remove file names that have already been collated - need to add this for next round, no need to read things in again
-# #read in the names of files already incorporated
-# incorp_wp_filelist <- readRDS(file.path(inter_dir,'waypoint_file_list.RDS'))
-# 
-# #list files in meta dir
-# saveRDS(wp_list, file.path(inter_dir,'waypoint_file_list.RDS'))
-# 
-# #remove already-incorporated files
-# wp_list <- wp_list[incorp_wp_filelist]
-
 
 wp_colnames = c('waypoint_seq', 'wp_seq', 'wp_coord_frame', 'wp_command', 
                 'wp_param1', 'wp_param2', 'wp_param3', 'wp_param4', 'wp_param_lat', 
@@ -240,7 +235,7 @@ all_wp <- all_wp %>%
 all_wp <- all_wp %>% 
   left_join(., metadata) 
 
-# collate and save rosmav and waypoint files ####
+# COLLATE ROSMAV AND WAYPOINTS ####
 
 #join rosmav and waypoints files
 rosmav_wp <- full_join(all_rosmav, all_wp) %>% 

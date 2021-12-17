@@ -12,11 +12,13 @@ path_pat = NULL
 
 if (grepl('win', os, ignore.case = T) == T ){
   path_pat = 'Z:/'
-  } else if (grepl('mac', os, ignore.case = T) == T ){
+  message('Windows OS detected.')
+} else if (grepl('mac', os, ignore.case = T) == T ){
   path_pat = '/Volumes/EpscorBlooms/'
-  } else {
-    message('OS path pattern not detected. Please store OS path pattern manually.')
-  }
+  message('Mac OS detected')
+} else {
+  message('OS path pattern not detected. Please store OS path pattern manually.')
+}
 
 # point to directories
 meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/metadata_template/')
@@ -34,15 +36,8 @@ read_asv_template = function(filename, directory){
            deployment_endtime = format(deployment_endtime, '%H:%M'))
 }
 
-#read in the names of files already incorporated
-incorp_filelist <- readRDS(file.path(inter_dir,'metadata_file_list.RDS'))
-
 #list files in meta dir
 filelist <- list.files(meta_dir)
-saveRDS(filelist, file.path(inter_dir,'metadata_file_list.RDS'))
-
-#remove already-incorporated files
-filelist <- filelist[incorp_filelist]
 
 #apply function over filelist
 for(i in 1:length(filelist)) {
@@ -86,8 +81,7 @@ for(j in 1:length(filelist)){
 
 # write the additional data metadata file
 collated_additional_sampling <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv'))) %>%
-  mutate(date = as.character(date),
-         time_grab = format(as.POSIXct(time_grab), '%H:%M'))
+  mutate(date = as.character(date))
 
 additional_sampling %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
@@ -116,8 +110,7 @@ for(j in 1:length(filelist)){
 
 # write the additional data metadata file
 collated_additional_sampling_loc <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv'))) %>%
-  mutate(date = as.character(date),
-         time_grab = as.character(format(as.POSIXct(time_grab), '%H:%M')))
+  mutate(date = as.character(date))
 
 samploc_data %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
@@ -157,7 +150,7 @@ sonde_data %>%
                           lake == 'Sunapee' ~ 'SUN',
                           TRUE ~ lake),
          date = as.character(date)) %>% 
-  full_join(., collated_additional_sampling_loc) %>%
+  full_join(., collated_sonde) %>%
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv')), row.names = F)
 
 
