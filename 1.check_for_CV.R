@@ -24,10 +24,11 @@ lake_dir = paste0(path_pat, 'project_data/ASV_data/raw_csv_data/')
 meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/')
 
 
-# read in metadata and select columns for processed Bag files ####
+# read in compiled metadata sheet
 metadata <- read.csv(file.path(comp_dir, 'compiled_ASV_deployment_general_info.csv')) %>% 
-  filter(!is.na(rosmav_missionreached_filename))
+  filter(!is.na(rosmav_missionreached_filename)) #filter out incomplete files
 
+# read in columns for processed Bag files ####
 asv_filelist <- metadata$ASV_processed_filename
 asv_lakelist <- metadata$lake
 asv_datelist <- metadata$date
@@ -89,7 +90,7 @@ rosmav_col_cv <- read.csv(file.path(meta_dir, 'colnames_cv/rosmav_colnames_cvnam
 rosmav_col_cv <- full_join(rosmav_col_cv, rosmav_col_for_cv)
 
 #save file
-write.csv(rosmav_col_cv, file.path(meta_dir, 'colnames_cv/bag_colnames_cvnames.csv'), row.names = F)
+write.csv(rosmav_col_cv, file.path(meta_dir, 'colnames_cv/rosmav_colnames_cvnames.csv'), row.names = F)
 
 #see what needs cv
 cv_needed <- rosmav_col_cv %>% 

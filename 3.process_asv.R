@@ -62,7 +62,6 @@ for(i in 1:length(deployment_list)) {
   orig_lat = round(asv_wp$latitude_deg[ix-1], digits = 3)
   orig_lon = round(asv_wp$longitude_deg[ix-1], digits = 3)
   
-  
   #remove data at end of deployment, 
   zx = which(round(asv_wp_trunc$longitude_deg, digits = 3) == orig_lon & round(asv_wp_trunc$latitude_deg, digits = 3) == orig_lat)
   #get nrow in df; zx will be in last half of data
