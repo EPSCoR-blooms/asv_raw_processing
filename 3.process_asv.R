@@ -5,6 +5,7 @@
 # 2) flagging waypoints
 # 3) flagging loiters
 
+#NOTE: RESTART R BEFORE RUNNING THIS SCRIPT. data.table NEEDS TO BE LOADED BEFORE tidyverse. Go to 'Session', then click 'Restart R'.
 library(data.table)
 library(tidyverse)
 

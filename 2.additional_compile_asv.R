@@ -1,6 +1,6 @@
 # This script compiles all raw data for the robotics runs from the bag csv files, the rosmav files, and the waypoints files. 
 # Note, the completed metadata template is also required so that the proper waypoints files are associated with the rosmav files.
-# If you have not yet run 0.compile_metadata.R go do that before you run this script.
+# If you have not yet run 0.compile_metadata.R and 1.check_for_CV.R go do that before you run this script.
 
 #load libraries
 library(tidyverse)
