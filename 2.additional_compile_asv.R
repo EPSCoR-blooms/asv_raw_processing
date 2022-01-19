@@ -40,6 +40,13 @@ metadata <- metadata %>%
   rename(rosmav_filename = rosmav_missionreached_filename) %>% 
   filter(!is.na(rosmav_filename))
 
+# # I only prepped and moved most of the Sunapee data - a couple of files to leave out here to avoid script meltdown
+# metadata <- metadata %>%
+#   filter((lake == 'SUN' & date != '2021-07-22') |
+#            lake == 'AUB' |
+#            lake == 'CHN' |
+#            lake == 'SAB')
+
 ## list lakes in lake directory ####
 lake_list <- dir(lake_dir, recursive = F)
 

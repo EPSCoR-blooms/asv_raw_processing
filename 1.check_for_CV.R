@@ -23,10 +23,16 @@ inter_dir = paste0(path_pat, 'project_data/ASV_data/intermediary/')
 lake_dir = paste0(path_pat, 'project_data/ASV_data/raw_csv_data/')
 meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/')
 
-
 # read in compiled metadata sheet
 metadata <- read.csv(file.path(comp_dir, 'compiled_ASV_deployment_general_info.csv')) %>% 
   filter(!is.na(rosmav_missionreached_filename)) #filter out incomplete files
+
+# # I only prepped and moved most of the Sunapee data - a couple of files to leave out here to avoid script meltdown
+# metadata <- metadata %>%
+#   filter((lake == 'SUN' & date != '2021-07-22') |
+#            lake == 'AUB' |
+#            lake == 'CHN' |
+#            lake == 'SAB')
 
 # read in columns for processed Bag files ####
 asv_filelist <- metadata$ASV_processed_filename
