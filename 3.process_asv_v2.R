@@ -132,6 +132,7 @@ for(i in 1:length(deployment_list)) {
   #get lake name and deployment dates
   lake_folder = asv_wp_trunc$lake[1]
   deployment_date = asv_wp_trunc$date[1]
+  deployment_inst = asv_wp_trunc$deployment_instance[1]
   
   #re-order columns
   col_names_asv <- colnames(asv_wp_trunc)
@@ -140,7 +141,7 @@ for(i in 1:length(deployment_list)) {
     select(lake, year, date, lab, equipment, deployment_type, deployment_instance, eor_trunc_method, eor_flag, velocity_flag, loiter_flag, everything())
   
   #write file to processed folder
-  fwrite(asv_wp_trunc, file.path(proc_dir, lake_folder, paste0(lake_folder, '_', deployment_date, '_asv_processed_v', Sys.Date(), '.csv')), row.names = F)
-  message(paste0('file processed and saved as ',lake_folder, '_', deployment_date, '_asv_processed_v', Sys.Date(), '.csv'))
+  fwrite(asv_wp_trunc, file.path(proc_dir, lake_folder, paste0(lake_folder, '_', deployment_date, '_', deployment_inst, '_asv_processed_v', Sys.Date(), '.csv')), row.names = F)
+  message(paste0('file processed and saved as ',lake_folder, '_', deployment_date,'_', deployment_inst,  '_asv_processed_v', Sys.Date(), '.csv'))
   message('')#left intentionally blank to create space between files
 }
