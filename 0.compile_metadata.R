@@ -31,9 +31,7 @@ read_asv_template = function(filename, directory){
                            sheet = 'WeatherFieldInfo')
   deploy_info <- read_xlsx(file.path(directory, filename), 
             sheet = 'deployment_log')
-  metadata <- full_join(weather_obs, deploy_info) %>% 
-    mutate(deployment_starttime = format(deployment_starttime, '%H:%M'),
-           deployment_endtime = format(deployment_endtime, '%H:%M'))
+  metadata <- full_join(weather_obs, deploy_info)
 }
 
 #list files in meta dir
@@ -56,6 +54,8 @@ compiled %>%
                           lake == 'Sabattus' ~ 'SAB',
                           lake == 'Sunapee' ~ 'SUN',
                           TRUE ~ lake)) %>% 
+  mutate(deployment_starttime = format(deployment_starttime, '%H:%M'),
+         deployment_endtime = format(deployment_endtime, '%H:%M')) %>% 
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_general_info.csv')), row.names = F)
 
 # read in the ASV additional data sheets ####
@@ -134,7 +134,7 @@ for(j in 1:length(filelist)){
     print('sonde data detected')
     sonde_data <- full_join(additional_data, sonde_data)
   }  else {
-    print('no additional metadata detected')
+    print('no sonde data detected')
     sonde_data <- additional_data
   }
 }
