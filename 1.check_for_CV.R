@@ -1,5 +1,9 @@
 # list out column names from the pre-processed ASV files to see if additional CV needs to be added to colname CV list
 
+
+#unload libraries
+pacman::p_unload(pacman::p_loaded(), character.only = TRUE)
+
 #load libraries
 library(tidyverse)
 
@@ -27,12 +31,12 @@ meta_dir = paste0(path_pat, 'project_data/ASV_data/metadata/')
 metadata <- read.csv(file.path(comp_dir, 'compiled_ASV_deployment_general_info.csv')) %>% 
   filter(!is.na(rosmav_missionreached_filename)) #filter out incomplete files
 
-# # I only prepped and moved most of the Sunapee data - a couple of files to leave out here to avoid script meltdown
-# metadata <- metadata %>%
-#   filter((lake == 'SUN' & date != '2021-07-22') |
-#            lake == 'AUB' |
-#            lake == 'CHN' |
-#            lake == 'SAB')
+# Drop the 2021-07-22 file from this run - this has to be run separately
+metadata <- metadata %>%
+  filter((lake == 'SUN' & date != '2021-07-22') |
+           lake == 'AUB' |
+           lake == 'CHN' |
+           lake == 'SAB')
 
 # read in columns for processed Bag files ####
 asv_filelist <- metadata$ASV_processed_filename
@@ -48,6 +52,7 @@ for(i in 1:length(asv_filelist)){
     col2_for_cv <- colnames(df)
     col_for_cv <- append(col_for_cv, col2_for_cv)
   }
+  message((asv_filelist[i]), ' read for controlled vocabulry')
 }
 
 col_for_cv <- as.data.frame(unique(col_for_cv))
@@ -85,6 +90,7 @@ for(i in 1:length(rosmav_filelist)){
     rosmav_col2_for_cv <- colnames(df)
     rosmav_col_for_cv <- append(rosmav_col_for_cv, rosmav_col2_for_cv)
   }
+  message(rosmav_filelist[i], ' read for controlled vocabulary')
 }
 
 rosmav_col_for_cv <- as.data.frame(unique(rosmav_col_for_cv))
