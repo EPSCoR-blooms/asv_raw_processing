@@ -2,6 +2,9 @@
 # Note, the completed metadata template is also required so that the proper waypoints files are associated with the rosmav files.
 # If you have not yet run 0.compile_metadata.R and 1.check_for_CV.R go do that before you run this script.
 
+#unload libraries
+pacman::p_unload(pacman::p_loaded(), character.only = TRUE)
+
 #load libraries
 library(tidyverse)
 
@@ -40,12 +43,12 @@ metadata <- metadata %>%
   rename(rosmav_filename = rosmav_missionreached_filename) %>% 
   filter(!is.na(rosmav_filename))
 
-# # I only prepped and moved most of the Sunapee data - a couple of files to leave out here to avoid script meltdown
-# metadata <- metadata %>%
-#   filter((lake == 'SUN' & date != '2021-07-22') |
-#            lake == 'AUB' |
-#            lake == 'CHN' |
-#            lake == 'SAB')
+# remove problematic sunapee run
+metadata <- metadata %>%
+  filter((lake == 'SUN' & date != '2021-07-22') |
+           lake == 'AUB' |
+           lake == 'CHN' |
+           lake == 'SAB')
 
 ## list lakes in lake directory ####
 lake_list <- dir(lake_dir, recursive = F)
@@ -93,11 +96,15 @@ for (y in 1:nrow(compiled_lake_list)) {
   }
   rm(date_list_df)
 }
+rm(compiled_lake_list)
 
 deployment_date_list <- deployment_date_list %>% 
-  select(lake, year, date_list) 
+  select(lake, year, date_list) %>% 
+  rename(date = date_list)
 
-rm(compiled_lake_list)
+deployment_date_list <- deployment_date_list %>% 
+  left_join(., metadata) %>% 
+  select(lake, year, date, deployment_instance, notes_deployment)
 
 write.csv(deployment_date_list, file.path(parent_dir, paste0('ASV_deployment_date_list.csv')), row.names = F)
 
@@ -168,8 +175,9 @@ all_asv_data <- all_asv_data %>%
 all_asv_data <- all_asv_data %>% 
   select(-timestamp_gpslocalvelocity_sec,-timestamp_gpsspeed_sec,-timestamp_gpsvelocity_sec)
 
-#write asv data as RDS (it's a huge file and it takes a minute)
+#write asv data as RDS (it's usually a huge file and it takes a minute, especially if you're processing a lot of new files)
 saveRDS(all_asv_data, file.path(inter_dir, 'asv_data_raw.RDS'))
+
 
 # ROSMAV DATA PROCESSING ####
 
@@ -250,7 +258,7 @@ rosmav_wp <- full_join(all_rosmav, all_wp) %>%
 
 #grab only the columns we need
 rosmav_wp <- rosmav_wp %>% 
-  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, deployment_starttime, deployment_endtime,
+  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, waypoint_start, test_run, deployment_starttime, deployment_endtime,
          timestamp_header_sec, header_seq, waypoint_seq, wp_command, wp_param1,
          rosmav_filename, path_filename, ASV_processed_filename)
 
