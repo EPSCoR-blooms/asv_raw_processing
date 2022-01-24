@@ -5,7 +5,10 @@
 # 2) flagging waypoints
 # 3) flagging loiters
 
-#NOTE: RESTART R BEFORE RUNNING THIS SCRIPT. data.table NEEDS TO BE LOADED BEFORE tidyverse. Go to 'Session', then click 'Restart R'.
+#unload libraries
+pacman::p_unload(pacman::p_loaded(), character.only = TRUE)
+
+#load libraries
 library(data.table)
 library(tidyverse)
 
@@ -55,11 +58,28 @@ for(i in 1:length(deployment_list)) {
     arrange(timestamp_gps_sec) %>% 
     select(-timestamp_gps_sec_integer)
   
-  #remove data before header seq 0, intiation of mission
-  ix = which(asv_wp$header_seq == 0)
-  seq0_wp = asv_wp$timestamp_gps_sec[ix]
+  #remove data before first waypoint of mission (1 or minimum waypoint)
+  wpsq_min = min(asv_wp$waypoint_seq, na.rm = T)
+  
+  ix = which(asv_wp$waypoint_seq == wpsq_min)
+  
+  #if there are 2 waypoint #1 and there was a test run at the beginning of the run, then choose the second wp for truncation
+  if(length(ix) ==1){
+    ix = ix[1]
+  } else if (length(ix) > 1 & asv_wp$test_run[1] == 'y') {
+    ix = ix[2]
+  }
+  
+  #if there is a waypoint to start at other than 1 (from metadata), truncate at that waypoing
+  if(!is.na(asv_wp$waypoint_start[1])) {
+    ix = which(asv_wp$waypoint_seq == asv_wp$waypoint_start[1])
+  } else {
+    ix = ix
+  }
+  
+  start_wp = asv_wp$timestamp_gps_sec[ix]
   asv_wp_trunc <- asv_wp %>% 
-    filter(timestamp_gps_sec >= seq0_wp)
+    filter(timestamp_gps_sec >= start_wp)
 
   # find out which is later, last waypoint or within 50m of deployment, or truncation of last minute
   
@@ -144,4 +164,6 @@ for(i in 1:length(deployment_list)) {
   fwrite(asv_wp_trunc, file.path(proc_dir, lake_folder, paste0(lake_folder, '_', deployment_date, '_', deployment_inst, '_asv_processed_v', Sys.Date(), '.csv')), row.names = F)
   message(paste0('file processed and saved as ',lake_folder, '_', deployment_date,'_', deployment_inst,  '_asv_processed_v', Sys.Date(), '.csv'))
   message('')#left intentionally blank to create space between files
+  
+  rm(ix)
 }
