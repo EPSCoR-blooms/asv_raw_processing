@@ -2,6 +2,9 @@
 
 # this will likely need some attention at the end for dealing with incomparable data types in the joins.
 
+# detach all libraries
+pacman::p_unload(pacman::p_loaded(), character.only = TRUE)
+
 #load libraries
 library(tidyverse)
 library(readxl)
@@ -40,12 +43,17 @@ filelist <- list.files(meta_dir)
 #apply function over filelist
 for(i in 1:length(filelist)) {
   dataframe = read_asv_template(filelist[i], meta_dir)
+  dataframe$source = filelist[i]
   if(i == 1){
     compiled = dataframe
   } else {
     compiled <- full_join(compiled, dataframe)
   }
 }
+
+#drop incomplete records
+compiled <- compiled %>% 
+  filter(!is.na(equipment))
 
 #format lake names to 3 letter and save file
 compiled %>% 
@@ -62,7 +70,9 @@ compiled %>%
 
 #grab lake, date info from compiled
 additional_data <- compiled %>% 
-  select(lake, date)
+  select(lake, date) 
+
+addtional_data <- unique(additional_data)
 
 # get the sheets list for each metadata file and use it for if statements in loop
 for(j in 1:length(filelist)){
@@ -79,10 +89,6 @@ for(j in 1:length(filelist)){
   }
 }
 
-# write the additional data metadata file
-collated_additional_sampling <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv'))) %>%
-  mutate(date = as.character(date))
-
 additional_sampling %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
                           lake == 'China' ~ 'CHN', 
@@ -90,7 +96,6 @@ additional_sampling %>%
                           lake == 'Sunapee' ~ 'SUN',
                           TRUE ~ lake),
          date = as.character(date)) %>% 
-  full_join(., collated_additional_sampling) %>%
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_additionalsampling_info.csv')), row.names = F)
 
 # get the sheets list for each metadata file and use it for if statements in loop
@@ -103,14 +108,10 @@ for(j in 1:length(filelist)){
     print('sampling location metadata detected')
     samploc_data <- full_join(additional_data, samploc_data)
   }  else {
-    print('no additional metadata detected')
+    print('no sampling location metadata detected')
     samploc_data <- additional_data
   }
 }
-
-# write the additional data metadata file
-collated_additional_sampling_loc <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv'))) %>%
-  mutate(date = as.character(date))
 
 samploc_data %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
@@ -120,7 +121,6 @@ samploc_data %>%
                           TRUE ~ lake),
          date = as.character(date),
          time_grab = as.character(format(as.POSIXct(time_grab), '%H:%M'))) %>%
-  full_join(., collated_additional_sampling_loc) %>%
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_sampling_loc_info.csv')), row.names = F)
 
 
@@ -139,10 +139,6 @@ for(j in 1:length(filelist)){
   }
 }
 
-# write the additional data metadata file
-collated_sonde <- read.csv(file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv'))) %>%
-  mutate(date = as.character(date))
-
 sonde_data %>% 
   mutate(lake = case_when(lake == 'Auburn' ~ 'AUB',
                           lake == 'China' ~ 'CHN', 
@@ -150,7 +146,6 @@ sonde_data %>%
                           lake == 'Sunapee' ~ 'SUN',
                           TRUE ~ lake),
          date = as.character(date)) %>% 
-  full_join(., collated_sonde) %>%
   write.csv(., file.path(comp_dir, paste0('compiled_ASV_deployment_sonde_data.csv')), row.names = F)
 
 
