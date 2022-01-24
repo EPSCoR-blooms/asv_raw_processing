@@ -60,6 +60,11 @@ for(i in 1:length(deployment_list)) {
   
   #remove data before first waypoint of mission (1 or minimum waypoint)
   wpsq_min = min(asv_wp$waypoint_seq, na.rm = T)
+  if (wpsq_min == 0) {
+    wpsq_min = wpsq_min +1
+  } else {
+    wpsq_min = wpsq_min
+  }
   
   ix = which(asv_wp$waypoint_seq == wpsq_min)
   
@@ -68,13 +73,6 @@ for(i in 1:length(deployment_list)) {
     ix = ix[1]
   } else if (length(ix) > 1 & asv_wp$test_run[1] == 'y') {
     ix = ix[2]
-  }
-  
-  #if there is a waypoint to start at other than 1 (from metadata), truncate at that waypoing
-  if(!is.na(asv_wp$waypoint_start[1])) {
-    ix = which(asv_wp$waypoint_seq == asv_wp$waypoint_start[1])
-  } else {
-    ix = ix
   }
   
   start_wp = asv_wp$timestamp_gps_sec[ix]

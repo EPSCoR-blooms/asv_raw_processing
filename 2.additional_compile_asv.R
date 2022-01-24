@@ -37,8 +37,8 @@ metadata <- read.csv(file.path(comp_dir, 'compiled_ASV_deployment_general_info.c
 
 ## grab data for asv processing ####
 metadata <- metadata %>% 
-  select(date, lake, lab, deployment_type, equipment,
-         deployment_instance, deployment_starttime, deployment_endtime,
+  select(date, lake, lab, deployment_type, notes_deployment, equipment,
+         deployment_instance, test_run, deployment_starttime, deployment_endtime,
          path_filename, ASV_processed_filename, rosmav_missionreached_filename) %>% 
   rename(rosmav_filename = rosmav_missionreached_filename) %>% 
   filter(!is.na(rosmav_filename))
@@ -242,13 +242,13 @@ for(k in 1:length(wp_list)) {
 
 #grab lake, year, dep date
 all_wp <- all_wp %>% 
-  mutate(lake = substr(wp_file_path, 1, 3),
-         path_filename = substr(wp_file_path, 5, nchar(wp_file_path))) %>% 
-  select(lake, path_filename, waypoint_seq, wp_command, wp_param1)
+  mutate(path_filename = substr(wp_file_path, 5, nchar(wp_file_path))) %>% 
+  select(path_filename, waypoint_seq, wp_command, wp_param1)
 
 #join with metadata
 all_wp <- all_wp %>% 
-  left_join(., metadata) 
+  left_join(., metadata) %>% 
+  filter(!is.na(date))
 
 # COLLATE ROSMAV AND WAYPOINTS ####
 
@@ -258,7 +258,7 @@ rosmav_wp <- full_join(all_rosmav, all_wp) %>%
 
 #grab only the columns we need
 rosmav_wp <- rosmav_wp %>% 
-  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, waypoint_start, test_run, deployment_starttime, deployment_endtime,
+  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, test_run, deployment_starttime, deployment_endtime,
          timestamp_header_sec, header_seq, waypoint_seq, wp_command, wp_param1,
          rosmav_filename, path_filename, ASV_processed_filename)
 
