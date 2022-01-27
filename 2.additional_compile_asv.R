@@ -106,7 +106,9 @@ deployment_date_list <- deployment_date_list %>%
   left_join(., metadata) %>% 
   select(lake, year, date, deployment_instance, notes_deployment)
 
-write.csv(deployment_date_list, file.path(parent_dir, paste0('ASV_deployment_date_list.csv')), row.names = F)
+## UPDATE:::: add in manually-processed files ##
+
+# write.csv(deployment_date_list, file.path(parent_dir, paste0('ASV_deployment_date_list.csv')), row.names = F)
 
 
 # LIST FILES FOR PROCESSING ####
