@@ -104,13 +104,15 @@ deployment_date_list <- deployment_date_list %>%
 
 deployment_date_list <- deployment_date_list %>% 
   left_join(., metadata) %>% 
-  select(lake, year, date, deployment_instance, notes_deployment)
+  select(lake, year, date, deployment_instance, equipment, notes_deployment)
 
 ### add in manually-processed files [[WILL NEED TO BE UPDATED IF OTHER FILES ARE MANUALLY PROCESSED]] ----
 colnames(deployment_date_list)
 
 manual_deployment_list <- full_join(deployment_date_list, metadata) %>% 
-  filter(lake == 'SUN' & date == '2021-07-22')
+  filter(lake == 'SUN' & date == '2021-07-22') %>% 
+  select(lake, year, date, deployment_instance, equipment, notes_deployment) %>% 
+  mutate(year = '2021')
 
 deployment_date_list <- full_join(deployment_date_list, manual_deployment_list)
 
