@@ -52,7 +52,7 @@ for(i in 1:length(asv_filelist)){
     col2_for_cv <- colnames(df)
     col_for_cv <- append(col_for_cv, col2_for_cv)
   }
-  message((asv_filelist[i]), ' read for controlled vocabulry')
+  message((asv_filelist[i]), ' read for controlled vocabulary')
 }
 
 col_for_cv <- as.data.frame(unique(col_for_cv))

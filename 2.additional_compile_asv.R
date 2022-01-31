@@ -44,7 +44,7 @@ metadata <- metadata %>%
   filter(!is.na(rosmav_filename))
 
 # remove problematic sunapee run
-metadata <- metadata %>%
+metadata_filt <- metadata %>%
   filter((lake == 'SUN' & date != '2021-07-22') |
            lake == 'AUB' |
            lake == 'CHN' |
@@ -106,9 +106,15 @@ deployment_date_list <- deployment_date_list %>%
   left_join(., metadata) %>% 
   select(lake, year, date, deployment_instance, notes_deployment)
 
-## UPDATE:::: add in manually-processed files ##
+### add in manually-processed files [[WILL NEED TO BE UPDATED IF OTHER FILES ARE MANUALLY PROCESSED]] ----
+colnames(deployment_date_list)
 
-# write.csv(deployment_date_list, file.path(parent_dir, paste0('ASV_deployment_date_list.csv')), row.names = F)
+manual_deployment_list <- full_join(deployment_date_list, metadata) %>% 
+  filter(lake == 'SUN' & date == '2021-07-22')
+
+deployment_date_list <- full_join(deployment_date_list, manual_deployment_list)
+
+write.csv(deployment_date_list, file.path(parent_dir, paste0('ASV_deployment_date_list.csv')), row.names = F)
 
 
 # LIST FILES FOR PROCESSING ####
