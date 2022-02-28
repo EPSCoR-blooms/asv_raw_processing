@@ -110,9 +110,9 @@ cv_needed <- rosmav_col_cv %>%
   filter(is.na(cv_units))
 
 if(length(cv_needed$cv_units) > 0) {
-  message('controlled vocabulary needed for bag file processing')
+  message('controlled vocabulary needed for rosmav file processing')
 } else{
-  message('all controlled vocabulary present for bag file processing')
+  message('all controlled vocabulary present for rosmav file processing')
 }
 
 
