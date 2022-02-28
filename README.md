@@ -14,5 +14,10 @@ processing scripts for raw ASV data that uses metadata template
 
 *3.process_asv.R*: this script processes each of the ASV deployments and truncates before/after launch, flags waypoint info, and flags loiter times
 
+*x.manual_process.R*: this script processes ASV deplooyments that needed special attention and could not be run through the processing script workflow above.
+    as of Feb 2022, this consists of 2021-07-22 at Sunapee, that combined two pathfiles
+
+*y.additional_flags.R*: this script adds flags where the robot did not complete the prescribed path.
+
 
 NOTE: file in archive folder *2.compile_asv.R* was used for the first round of processing (8 missions) and is now defunct. If you run this file, you will process every single raw file in the DartFS system. Don't do that. Use the code above instead, which only processed new files.
