@@ -71,7 +71,7 @@ for(i in 1:length(deployment_list)) {
   #if there are 2 waypoint #1 and there was a test run at the beginning of the run, then choose the second wp for truncation
   if(length(ix) ==1){
     ix = ix[1]
-  } else if (length(ix) > 1 & asv_wp$test_run[1] == 'y') {
+  } else if (length(ix) > 1 & asv_wp$test_path[1] == 'y') {
     ix = ix[2]
   }
   
@@ -136,10 +136,12 @@ for(i in 1:length(deployment_list)) {
   #initialize loiter flag column
   asv_wp_trunc$loiter_flag = ''
 
-  for(l in 1:length(loiter_start)){
-    asv_wp_trunc <- asv_wp_trunc %>% 
-      mutate(loiter_flag = case_when(timestamp_gps_sec >= loiter_start[l] & timestamp_gps_sec <= loiter_end[l] ~ 'l',
-                                     TRUE ~ loiter_flag))
+  if(length(loiter_start)>0){
+    for(l in 1:length(loiter_start)){
+      asv_wp_trunc <- asv_wp_trunc %>% 
+        mutate(loiter_flag = case_when(timestamp_gps_sec >= loiter_start[l] & timestamp_gps_sec <= loiter_end[l] ~ 'l',
+                                       TRUE ~ loiter_flag))
+    }
   }
   
   #add speed flag for movement faster than 1mps

@@ -38,7 +38,7 @@ metadata <- read.csv(file.path(comp_dir, 'compiled_ASV_deployment_general_info.c
 ## grab data for asv processing ####
 metadata <- metadata %>% 
   select(date, lake, lab, deployment_type, notes_deployment, equipment,
-         deployment_instance, test_run, deployment_starttime, deployment_endtime,
+         deployment_instance, test_path, deployment_starttime, deployment_endtime,
          path_filename, ASV_processed_filename, rosmav_missionreached_filename) %>% 
   rename(rosmav_filename = rosmav_missionreached_filename) %>% 
   filter(!is.na(rosmav_filename))
@@ -198,6 +198,17 @@ rosmav_colnames_cv <- read.csv(file.path(meta_dir, 'colnames_cv/rosmav_colnames_
 for(y in 1:length(rosmav_csv)) {
   df = read.csv(file.path(lake_dir, rosmav_csv[y])) 
   
+  #if datetime is an integer, convert to datetime (this happens in 2020)
+  if (typeof(df$time) == 'integer'){
+    df <- df %>% 
+      mutate(.header.stamp.secs = time) %>% 
+      mutate(time = as.character(as.POSIXct(time, origin = '1970-01-01')))
+    #2020 also needs waypoint header seq column
+    df <- df %>% 
+      rowid_to_column(var = '.header.seq')
+  }
+  
+  
   #get column names and change to CV
   df_names = names(df)
   df_names = data.frame(df_names)
@@ -266,9 +277,9 @@ all_wp <- all_wp %>%
 rosmav_wp <- full_join(all_rosmav, all_wp) %>% 
   filter(!is.na(datetime)) #drop data from paths that didn't complete or record
 
-#grab only the columns we need
+
 rosmav_wp <- rosmav_wp %>% 
-  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, test_run, deployment_starttime, deployment_endtime,
+  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, test_path, deployment_starttime, deployment_endtime,
          timestamp_header_sec, header_seq, waypoint_seq, wp_command, wp_param1,
          rosmav_filename, path_filename, ASV_processed_filename)
 
