@@ -194,7 +194,7 @@ rosmav_wp <- full_join(all_rosmav, all_wp) %>%
 
 #grab only the columns we need
 rosmav_wp <- rosmav_wp %>% 
-  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, test_run, deployment_starttime, deployment_endtime,
+  select(lake, year, date, lab, deployment_type, equipment, deployment_instance, test_path, deployment_starttime, deployment_endtime,
          timestamp_header_sec, header_seq, waypoint_seq, wp_command, wp_param1,
          rosmav_filename, path_filename, ASV_processed_filename)
 
@@ -203,15 +203,58 @@ rosmav_wp <- rosmav_wp%>%
 
 #subset asv data
 asv <- asv_data %>% 
-  mutate(timestamp_gps_sec_integer = as.integer(timestamp_gps_sec)) 
+  mutate(timestamp_gps_sec_integer = round(timestamp_gps_sec, digits = 0)) 
 #subset wp data
 wp <- rosmav_wp %>% 
   rename(timestamp_gps_sec_integer = timestamp_gps_sec) %>% 
-  mutate(timestamp_gps_sec_integer = as.integer(timestamp_gps_sec_integer))
+  mutate(timestamp_gps_sec_integer = round(timestamp_gps_sec_integer, digits = 0))
 #join asv and wp data
 asv_wp <- left_join(asv,wp) %>% 
   arrange(timestamp_gps_sec) %>% 
   select(-timestamp_gps_sec_integer)
+
+#check to see if the correct number of waypoints were added
+if (length(wp$header_seq) != length(unique(na.omit(asv_wp$header_seq)))) {
+  message('method for adding waypoints by timestamp failed, associating missing waypoints with nearest neighbor')
+  wp_list = unique(wp$header_seq)
+  asv_list = unique(na.omit(asv_wp$header_seq))
+  missing_wp = wp_list[!wp_list %in% asv_list]
+  #adjust the time to one second earlier
+  for (k in 1:length(missing_wp)){
+    wp <- wp %>% 
+      mutate(timestamp_gps_sec_integer = case_when(header_seq == (missing_wp[k]) ~ (timestamp_gps_sec_integer) - 1,
+                                                   TRUE ~ timestamp_gps_sec_integer))
+  }
+  # re-join asv_wp to see if it fixed the dropped waypoint
+  asv_wp = left_join(asv,wp) %>% 
+    arrange(timestamp_gps_sec) %>% 
+    select(-timestamp_gps_sec_integer)
+} else {}
+
+#check again and nudge forward if necessary
+if ((length(wp$header_seq) != length(unique(na.omit(asv_wp$header_seq)))) == TRUE) {
+  message('first time nudge failed, attempting alternate nearest neighbor')
+  wp_list = unique(wp$header_seq)
+  asv_list = unique(na.omit(asv_wp$header_seq))
+  missing_wp = wp_list[!wp_list %in% asv_list]
+  #adjust the time to one second earlier
+  for (k in 1:length(missing_wp)){
+    wp <- wp %>% 
+      mutate(timestamp_gps_sec_integer = case_when(header_seq == (missing_wp[k]) ~ (timestamp_gps_sec_integer) + 2,
+                                                   TRUE ~ timestamp_gps_sec_integer))
+  }
+  # re-join asv_wp to see if it fixed the dropped waypoint
+  asv_wp = left_join(asv,wp) %>% 
+    arrange(timestamp_gps_sec) %>% 
+    select(-timestamp_gps_sec_integer)
+} 
+
+if ((length(wp$header_seq) != length(unique(na.omit(asv_wp$header_seq)))) == TRUE) {
+  message('second time nudge unsuccessful, dataset will be missing a waypoint')
+  asv_wp$flag_waypoint = 'at least one waypoint was not able to be joined to the processed ASV file'
+} else {
+  message('time nudge successful, ready to process further')
+}
 
 #remove data before first waypoint of mission 
 wpsq_min = min(asv_wp$waypoint_seq, na.rm = T)[1]
@@ -284,5 +327,5 @@ asv_wp_trunc <- asv_wp_trunc %>%
   select(lake, year, date, lab, equipment, deployment_type, deployment_instance, eor_trunc_method, eor_flag, velocity_flag, loiter_flag, everything())
 
 #write file to processed folder
-fwrite(asv_wp_trunc, file.path(proc_dir, lake_folder, paste0(lake_folder, '_', deployment_date, '_', deployment_inst, '_asv_processed_v', Sys.Date(), '.csv')), row.names = F)
-message(paste0('file processed and saved as ',lake_folder, '_', deployment_date,'_', deployment_inst,  '_asv_processed_v', Sys.Date(), '.csv'))
+fwrite(asv_wp_trunc, file.path(proc_dir, lake_folder, paste0(lake_folder, '_', deployment_date,'_asv_processed_v', Sys.Date(), '.csv')), row.names = F)
+message(paste0('file processed and saved as ',lake_folder, '_', deployment_date,'_asv_processed_v', Sys.Date(), '.csv'))

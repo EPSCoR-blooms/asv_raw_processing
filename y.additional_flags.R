@@ -30,7 +30,7 @@ data_dir = paste0(path_pat, 'project_data/ASV_data/analysis_ready/')
 #robot came home between WP 14&16
 
 #read in processed file
-sun210827hc <- read.csv(file.path(data_dir, 'SUN/SUN_2021-08-27_HC_asv_processed_v2022-01-24.csv'))
+sun210827hc <- read.csv(file.path(data_dir, 'SUN/SUN_2021-08-27_HC_asv_processed_v2022-03-23.csv'))
 
 #check flag names
 names_col = colnames(sun210827hc)
@@ -49,14 +49,14 @@ sun210827hc <- sun210827hc %>%
                               TRUE ~ ''))
 
 #write new file
-fwrite(sun210827hc, file.path(data_dir, 'SUN/SUN_2021-08-27_HC_asv_processed_v2022-01-31.csv'))
+fwrite(sun210827hc, file.path(data_dir, 'SUN/SUN_2021-08-27_HC_asv_processed_v2022-03-23.csv'))
 
 ## Sunapee 2021-06-11 HC ----
 
 #robot came home between WP 20&21
 
 #read in processed file
-sun210611hc <- read.csv(file.path(data_dir, 'SUN/SUN_2021-06-11_HC_asv_processed_v2022-01-24.csv'))
+sun210611hc <- read.csv(file.path(data_dir, 'SUN/SUN_2021-06-11_HC_asv_processed_v2022-03-23.csv'))
 
 #check flag names
 names_col = colnames(sun210827hc)
@@ -74,5 +74,5 @@ sun210611hc <- sun210611hc %>%
   mutate(run_flag = case_when(timestamp_gps_sec> wp20 & timestamp_gps_sec<wp21 ~ 'off mission to home',
                               TRUE ~ ''))
 #write new file
-fwrite(sun210827hc, file.path(data_dir, 'SUN/SUN_2021-06-11_HC_asv_processed_v2022-01-31.csv'))
+fwrite(sun210827hc, file.path(data_dir, 'SUN/SUN_2021-06-11_HC_asv_processed_v2022-03-23.csv'))
 

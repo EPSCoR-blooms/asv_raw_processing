@@ -47,17 +47,60 @@ for(i in 1:length(deployment_list)) {
   #subset asv data
   asv <- asv_data_raw %>% 
     filter(ASV_processed_filename == deployment_list[i]) %>% 
-    mutate(timestamp_gps_sec_integer = as.integer(timestamp_gps_sec)) 
+    mutate(timestamp_gps_sec_integer = round(timestamp_gps_sec, digits = 0)) 
   #subset wp data
   wp <- rosmav_waypoints %>% 
     filter(ASV_processed_filename == deployment_list[i]) %>% 
     rename(timestamp_gps_sec_integer = timestamp_gps_sec) %>% 
-    mutate(timestamp_gps_sec_integer = as.integer(timestamp_gps_sec_integer))
+    mutate(timestamp_gps_sec_integer = round(timestamp_gps_sec_integer, digits = 0))
   #join asv and wp data
   asv_wp <- left_join(asv,wp) %>% 
     arrange(timestamp_gps_sec) %>% 
     select(-timestamp_gps_sec_integer)
   
+  #check to see if the correct number of waypoints were added
+  if (length(wp$header_seq) != length(unique(na.omit(asv_wp$header_seq)))) {
+    message('method for adding waypoints by timestamp failed, associating missing waypoints with nearest neighbor')
+    wp_list = unique(wp$header_seq)
+    asv_list = unique(na.omit(asv_wp$header_seq))
+    missing_wp = wp_list[!wp_list %in% asv_list]
+    #adjust the time to one second earlier
+    for (k in 1:length(missing_wp)){
+      wp <- wp %>% 
+        mutate(timestamp_gps_sec_integer = case_when(header_seq == (missing_wp[k]) ~ (timestamp_gps_sec_integer) - 1,
+                                                     TRUE ~ timestamp_gps_sec_integer))
+    }
+    # re-join asv_wp to see if it fixed the dropped waypoint
+    asv_wp = left_join(asv,wp) %>% 
+      arrange(timestamp_gps_sec) %>% 
+      select(-timestamp_gps_sec_integer)
+  } else {}
+  
+  #check again and nudge forward if necessary
+  if ((length(wp$header_seq) != length(unique(na.omit(asv_wp$header_seq)))) == TRUE) {
+    message('first time nudge failed, attempting alternate nearest neighbor')
+    wp_list = unique(wp$header_seq)
+    asv_list = unique(na.omit(asv_wp$header_seq))
+    missing_wp = wp_list[!wp_list %in% asv_list]
+    #adjust the time to one second earlier
+    for (k in 1:length(missing_wp)){
+      wp <- wp %>% 
+        mutate(timestamp_gps_sec_integer = case_when(header_seq == (missing_wp[k]) ~ (timestamp_gps_sec_integer) + 2,
+                                                     TRUE ~ timestamp_gps_sec_integer))
+    }
+    # re-join asv_wp to see if it fixed the dropped waypoint
+    asv_wp = left_join(asv,wp) %>% 
+      arrange(timestamp_gps_sec) %>% 
+      select(-timestamp_gps_sec_integer)
+    } 
+  
+  if ((length(wp$header_seq) != length(unique(na.omit(asv_wp$header_seq)))) == TRUE) {
+      message('second time nudge unsuccessful, dataset will be missing a waypoint')
+      asv_wp$flag_waypoint = 'at least one waypoint was not able to be joined to the processed ASV file'
+    } else {
+      message('time nudge successful, ready to process further')
+    }
+
   #remove data before first waypoint of mission (1 or minimum waypoint)
   wpsq_min = min(asv_wp$waypoint_seq, na.rm = T)
   if (wpsq_min == 0) {
@@ -73,6 +116,9 @@ for(i in 1:length(deployment_list)) {
     ix = ix[1]
   } else if (length(ix) > 1 & asv_wp$test_path[1] == 'y') {
     ix = ix[2]
+  }else if (length(ix) > 1 & asv_wp$test_path[1] == 'n') {
+    ix = ix[1]
+    message('metadata states there was no test path, but waypoints are repeated. no test path condition applied')
   }
   
   start_wp = asv_wp$timestamp_gps_sec[ix]

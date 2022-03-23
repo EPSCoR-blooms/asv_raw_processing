@@ -23,6 +23,8 @@ if (grepl('win', os, ignore.case = T) == T ){
 }
 
 # SET UP PROCESSING ----
+## IS THIS A FULL REPROCESSING, OR JUST AN ADDITION?? ##
+REPROCESS_ALL = 'y' #if 'y', all files will be reprocessed. if 'n', only new files will be processed
 
 ## point to directories ####
 lake_dir = paste0(path_pat, 'project_data/ASV_data/raw_csv_data/')
@@ -126,7 +128,8 @@ file_list <- dir(lake_dir, pattern = ('.csv'),  recursive = T)
 bag_csv <- file_list[!grepl('rosmav', file_list)]
 rosmav_csv <- file_list[grepl('rosmav', file_list)]
 
-# remove file names that have already been collated - need to add this for next round, no need to read things in again
+# remove file names that have already been collated, if not reprocessing entire dataset
+
 #read in the names of files already incorporated
 incorp_bag_filelist <- readRDS(file.path(inter_dir,'bag_file_list.RDS'))
 incorp_rosmav_filelist <- readRDS(file.path(inter_dir,'rosmav_file_list.RDS'))
@@ -135,9 +138,11 @@ incorp_rosmav_filelist <- readRDS(file.path(inter_dir,'rosmav_file_list.RDS'))
 saveRDS(bag_csv, file.path(inter_dir,'bag_file_list.RDS'))
 saveRDS(rosmav_csv, file.path(inter_dir,'rosmav_file_list.RDS'))
 
-#remove already-incorporated files
-bag_csv <- bag_csv[!(bag_csv %in% incorp_bag_filelist)]
-rosmav_csv <- rosmav_csv[!(rosmav_csv %in% incorp_rosmav_filelist)]
+#remove already-incorporated files if not reprocessing all files
+if (REPROCESS_ALL == 'n'){
+  bag_csv <- bag_csv[!(bag_csv %in% incorp_bag_filelist)]
+  rosmav_csv <- rosmav_csv[!(rosmav_csv %in% incorp_rosmav_filelist)] 
+}
 
 # BAG FILES PROCESSING ----
 
